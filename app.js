@@ -10,7 +10,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-    res.status(500).send('error');
+    res.status(200).send('Ok');
 });
 
 module.exports = { subtract, app };
