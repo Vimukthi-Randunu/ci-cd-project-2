@@ -37,13 +37,25 @@ jobs:
           npm install
           pm2 restart ci-cd-app
 
-    - name: Health check
+    - name: Setup SSH for rollback
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key    
+
+    - name: Health check with rollback
       run: |
         sleep 10
         response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:3000/health)
         if [ "$response" = "200" ]; then
           echo "Health check passed"
         else
-          echo "Health check failed with status $response"
+          echo "Health check failed with status $response - rolling back"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "
+            cd /home/ubuntu/ci-cd-project-2 &&
+            git checkout HEAD~1 &&
+            npm install &&
+            pm2 restart ci-cd-app
+          "
           exit 1
         fi
